@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Advanced E-Store{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Section -->
+    <div class="row mb-5">
+        <div class="col-md-12">
+            <div class="bg-primary text-white p-5 rounded text-center">
+                <h1 class="display-4">Welcome to Advanced E-Store</h1>
+                <p class="lead">Discover amazing products at great prices</p>
+                <a href="/products" class="btn btn-light btn-lg mt-3">Shop Now</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Featured Products -->
+    <div class="row">
+        <div class="col-md-12">
+            <h2 class="mb-4">Featured Products</h2>
+            <div id="featured-products" class="products-grid">
+                <!-- Products will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories -->
+    <div class="row mt-5">
+        <div class="col-md-12">
+            <h2 class="mb-4">Shop by Category</h2>
+            <div id="categories" class="row">
+                <!-- Categories will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        // Load featured products
+        const products = await apiCall('/products?sort=featured&per_page=6');
+        if (products && products.products) {
+            const container = document.getElementById('featured-products');
+            container.innerHTML = products.products.map(product => `
+                <div class="card product-card fade-in">
+                    <div class="position-relative">
+                        <img src="${product.image || '/placeholder.jpg'}" class="card-img-top product-image" alt="${product.name}">
+                        ${product.discount_percentage > 0 ? `<span class="discount-badge">-${product.discount_percentage}%</span>` : ''}
+                    </div>
+                    <div class="card-body">
+                        <h5 class="card-title text-truncate">${product.name}</h5>
+                        <div class="product-rating mb-2">
+                            <i class="fas fa-star"></i> ${product.rating}/5 (${product.review_count})
+                        </div>
+                        <div class="mb-3">
+                            <span class="product-price">$${product.current_price.toFixed(2)}</span>
+                            ${product.discount_price ? `<span class="product-original-price">$${product.price.toFixed(2)}</span>` : ''}
+                        </div>
+                        <button class="btn btn-primary btn-sm w-100" onclick="addToCart(${product.id})">Add to Cart</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        // Load categories
+        const categories = await apiCall('/products/categories');
+        if (categories && categories.categories) {
+            const container = document.getElementById('categories');
+            container.innerHTML = categories.categories.map(category => `
+                <div class="col-md-3 mb-3">
+                    <a href="/products?category_id=${category.id}" class="card category-card h-100 text-decoration-none">
+                        <div class="card-body text-center">
+                            <h5 class="card-title">${category.name}</h5>
+                            <p class="card-text text-muted">${category.description || ''}</p>
+                        </div>
+                    </a>
+                </div>
+            `).join('');
+        }
+    });
+    
+    async function addToCart(productId) {
+        if (!authToken) {
+            alert('Please login first');
+            window.location.href = '/login';
+            return;
+        }
+        
+        const result = await apiCall('/cart/add', {
+            method: 'POST',
+            body: JSON.stringify({ product_id: productId, quantity: 1 })
+        });
+        
+        if (result && result.message) {
+            alert('Product added to cart!');
+            updateCartCount();
+        } else {
+            alert(result?.error || 'Failed to add to cart');
+        }
+    }
+</script>
+{% endblock %}
